@@ -93,9 +93,9 @@ npm run dev              # aktif di http://localhost:3000
 | Role | Formulir Pendaftaran | Upload Berkas | Verifikasi Berkas | Kelola Pengumuman |
 |---|---|---|---|---|
 | **admin** | - | - | Ya, semua pendaftar | Ya (buat & hapus) |
-| **ortu** | Ya (hanya untuk data miliknya) | Ya (hanya untuk data miliknya) | - | Lihat saja |
+| **ortu/calon murid** | Ya (hanya untuk data miliknya) | Ya (hanya untuk data miliknya) | - | Lihat saja |
 
-> Catatan: satu akun `ortu` hanya boleh memiliki satu data pendaftaran. Endpoint upload dan detail pendaftaran divalidasi berdasarkan kepemilikan (`user_id`), bukan sekadar role.
+> Catatan: satu akun `ortu/calon murid` hanya boleh memiliki satu data pendaftaran. Endpoint upload dan detail pendaftaran divalidasi berdasarkan kepemilikan (`user_id`), bukan sekadar role.
 
 ## Pages & Features
 
@@ -105,7 +105,7 @@ npm run dev              # aktif di http://localhost:3000
 | `/login` | Public | Login (satu form untuk admin & ortu) |
 | `/register` | Public | Registrasi akun orang tua/wali |
 | `/dashboard` | Semua role (login) | Router otomatis sesuai role |
-| `/dashboard/ortu` | ortu | Form pendaftaran / status + upload berkas |
+| `/dashboard/ortu` | ortu/calon murid | Form pendaftaran / status + upload berkas |
 | `/dashboard/admin` | admin | Tab Data Pendaftar (verifikasi) + Tab Kelola Pengumuman |
 | `/pengumuman` | Semua role (login) | Daftar pengumuman terbaru |
 
