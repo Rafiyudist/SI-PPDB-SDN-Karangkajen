@@ -1,39 +1,118 @@
-# Source of Truth (SoT) — SI-PPDB
+# SI-PPDB - Sistem Informasi Penerimaan Peserta Didik Baru
 
-Paket dokumen blueprint ini disusun mengikuti kaidah Tutorial Praktikum "Cara Menyusun Dokumen Source of Truth (SoT)": deterministik, berbasis teks/markdown, dan fokus pada "apa" serta "bagaimana" — bukan potongan kode spesifik.
+Aplikasi full-stack untuk pendaftaran siswa baru secara online di SDN Karangkajen — menggantikan alur manual (Google Form + Excel) dengan satu platform terintegrasi untuk pendaftaran, verifikasi berkas, dan pengumuman.
 
-## Cara Menggunakan
+## Tech Stack
 
-Gunakan paket ini sebagai prompt/context untuk AI agentic developer (misal Claude Code) dengan urutan baca:
+- **Backend:** Express.js, MySQL, JWT Authentication, bcrypt, Multer (upload berkas)
+- **Frontend:** Next.js (Pages Router), React 18
+- **Database:** MySQL 8.x (lokal atau hosting — tidak terikat cloud provider tertentu)
 
-1. **`srs.md`** — batasan dan aturan bisnis sistem. Baca ini pertama kali agar AI memahami scope yang tidak boleh dilanggar.
-2. **`information_architecture.md`** — peta rute dan navigasi.
-3. **`design_system.md`** — aturan visual agar UI konsisten.
-4. **`database_schema.md`** + **`schema.sql`** — struktur database yang wajib dibuat persis seperti ini. `schema.sql` bisa langsung dieksekusi ke MySQL.
-5. **`user_flows/index.md`** lalu seluruh file `user_flows/userflow_uc_00X.md`** — detail interaksi tiap fitur, dibaca sesuai urutan implementasi yang disarankan di index.
+## Prerequisites
 
-## Struktur Folder
+- Node.js ≥ 18
+- npm
+- MySQL Server sudah berjalan (lokal via XAMPP/Laragon, atau instance MySQL lain)
+
+## Database Connection
+
+Buat file `.env` di folder `backend/` berdasarkan `backend/.env.example`:
 
 ```
-sot-ppdb/
-├── README.md
-├── srs.md
-├── information_architecture.md
-├── design_system.md
-├── database_schema.md
-├── schema.sql
-└── user_flows/
-    ├── index.md
-    ├── userflow_uc_001.md   (Registrasi Akun)
-    ├── userflow_uc_002.md   (Login)
-    ├── userflow_uc_003.md   (Formulir Pendaftaran)
-    ├── userflow_uc_004.md   (Upload Berkas)
-    ├── userflow_uc_005.md   (Verifikasi Admin)
-    ├── userflow_uc_006.md   (Kelola Pengumuman)
-    └── userflow_uc_007.md   (Lihat Pengumuman & Status)
+PORT=5000
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=
+DB_NAME=db_ppdb
+JWT_SECRET=ganti_dengan_string_rahasia_yang_panjang_dan_acak
 ```
 
-## Catatan
+- Struktur lengkap database ada di `sot-ppdb/database_schema.md`.
+- Skema tabel dibuat lewat `backend/sql/schema.sql` — jalankan sekali di awal setup.
+- Berkas yang diunggah orang tua disimpan di filesystem server (`backend/uploads/`), metadata-nya di tabel `dokumen`.
 
-Dokumen ini disusun berdasarkan implementasi yang sudah pernah dibuat sebelumnya (Next.js + Express.js + MySQL). Jika di-generate ulang dari nol oleh AI agent menggunakan SoT ini saja, hasil akhirnya seharusnya setara secara fungsional dengan project yang sudah ada.
-"# SI-PPDB-SDN-Karangajen" 
+## Project Structure
+
+```
+ppdb-project/
+├── backend/             # Backend (Express.js)
+│   ├── config/          # Koneksi database
+│   ├── middleware/      # Auth (JWT) & upload (Multer)
+│   ├── routes/          # API routes: auth, pendaftar, pengumuman
+│   ├── sql/              # schema.sql
+│   ├── uploads/          # File berkas yang diunggah
+│   └── server.js          # Entry point
+├── frontend/              # Frontend (Next.js)
+│   ├── components/        # Navbar, dsb
+│   ├── lib/                # api.js (fetch wrapper), auth.js (context)
+│   ├── pages/               # Routing: login, register, dashboard/*, pengumuman
+│   └── styles/               # globals.css
+└── sot-ppdb/                  # Source of Truth (blueprint project)
+    ├── srs.md
+    ├── information_architecture.md
+    ├── design_system.md
+    ├── database_schema.md
+    └── user_flows/
+```
+
+## Setup
+
+```bash
+# 1. Setup database
+mysql -u root -p < backend/sql/schema.sql
+
+# 2. Install dependencies backend
+cd backend
+npm install
+cp .env.example .env    # lalu isi kredensial MySQL & JWT_SECRET
+
+# 3. Jalankan backend
+npm run dev              # aktif di http://localhost:5000
+
+# 4. Install dependencies frontend (di terminal baru)
+cd frontend
+npm install
+cp .env.local.example .env.local
+
+# 5. Jalankan frontend
+npm run dev              # aktif di http://localhost:3000
+```
+
+> **Catatan:** `schema.sql` hanya perlu dijalankan sekali di awal, atau saat struktur tabel berubah. Menjalankan ulang tidak akan menghapus data existing karena menggunakan `CREATE TABLE IF NOT EXISTS`.
+
+## Seed User (Admin Default)
+
+| Email | Password | Role |
+|---|---|---|
+| admin@sekolah.sch.id | admin123 | admin |
+
+> Akun orang tua/wali TIDAK di-seed — dibuat sendiri lewat halaman `/register`. Segera ganti password admin default ini sebelum sistem dipakai secara nyata.
+
+## Hak Akses per Role
+
+| Role | Formulir Pendaftaran | Upload Berkas | Verifikasi Berkas | Kelola Pengumuman |
+|---|---|---|---|---|
+| **admin** | - | - | Ya, semua pendaftar | Ya (buat & hapus) |
+| **ortu** | Ya (hanya untuk data miliknya) | Ya (hanya untuk data miliknya) | - | Lihat saja |
+
+> Catatan: satu akun `ortu` hanya boleh memiliki satu data pendaftaran. Endpoint upload dan detail pendaftaran divalidasi berdasarkan kepemilikan (`user_id`), bukan sekadar role.
+
+## Pages & Features
+
+| Route | Akses | Fitur |
+|---|---|---|
+| `/` | Public | Landing page |
+| `/login` | Public | Login (satu form untuk admin & ortu) |
+| `/register` | Public | Registrasi akun orang tua/wali |
+| `/dashboard` | Semua role (login) | Router otomatis sesuai role |
+| `/dashboard/ortu` | ortu | Form pendaftaran / status + upload berkas |
+| `/dashboard/admin` | admin | Tab Data Pendaftar (verifikasi) + Tab Kelola Pengumuman |
+| `/pengumuman` | Semua role (login) | Daftar pengumuman terbaru |
+
+## Source of Truth
+
+- `sot-ppdb/srs.md` — Scope, aktor, tech stack, business rules
+- `sot-ppdb/information_architecture.md` — Route map & navigasi
+- `sot-ppdb/design_system.md` — Warna, tipografi, komponen UI
+- `sot-ppdb/database_schema.md` — Struktur database lengkap
+- `sot-ppdb/user_flows/` — 7 use case flow (UC-001 s.d. UC-007)
